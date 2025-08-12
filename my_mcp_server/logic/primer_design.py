@@ -12,7 +12,9 @@ TARGET_TM_MAX = 65.0
 
 # Default concentrations for Tm calculation (in mM and nM)
 DEFAULT_NA_CONC = 50.0
-# DEFAULT_DNA_CONC = 250.0 # Removed as dnac parameter is no longer used
+
+# Protective bases to add to the 5' end of the primer, before the restriction site
+PROTECTIVE_BASES = "AATT"
 
 def _calculate_tm(sequence: str, Na: float = DEFAULT_NA_CONC) -> float:
     """
@@ -29,68 +31,91 @@ def _find_optimal_primer(
 ) -> dict:
     """
     Iteratively searches for an optimal primer sequence within the target_sequence.
-    Considers length, GC content, and Tm.
+    Considers length, GC content, and Tm for the binding part.
+    Returns metrics for both binding part and full primer.
     """
     best_primer_info = None
     min_deviation = float('inf')
 
-    # Iterate through possible primer lengths
-    for length in range(MIN_PRIMER_LEN, MAX_PRIMER_LEN + 1):
+    # Iterate through possible primer lengths for the binding part
+    for binding_length in range(MIN_PRIMER_LEN, MAX_PRIMER_LEN + 1):
         if is_forward:
             # Forward primer: take from the beginning of the target_sequence
-            if len(target_sequence) < length:
+            if len(target_sequence) < binding_length:
                 continue # Not enough sequence for this length
-            primer_binding_part = target_sequence[:length]
-            full_primer_seq = enzyme_site + primer_binding_part
+            primer_binding_part = target_sequence[:binding_length]
         else:
             # Reverse primer: take from the end, then reverse complement
-            if len(target_sequence) < length:
+            if len(target_sequence) < binding_length:
                 continue # Not enough sequence for this length
-            primer_binding_part = Seq(target_sequence[-length:]).reverse_complement()
-            full_primer_seq = enzyme_site + str(primer_binding_part)
+            primer_binding_part = Seq(target_sequence[-binding_length:]).reverse_complement()
 
-        # Calculate metrics
-        current_gc = gc_fraction(full_primer_seq) * 100 # gc_fraction returns a float between 0 and 1
-        current_tm = _calculate_tm(full_primer_seq)
+        # Construct the full primer sequence (Protective Bases + Enzyme Site + Binding Part)
+        full_primer_seq = PROTECTIVE_BASES + enzyme_site + str(primer_binding_part)
 
-        # Check if criteria are met
-        is_len_ok = MIN_PRIMER_LEN <= len(full_primer_seq) - len(enzyme_site) <= MAX_PRIMER_LEN
-        is_gc_ok = TARGET_GC_MIN <= current_gc <= TARGET_GC_MAX
-        is_tm_ok = TARGET_TM_MIN <= current_tm <= TARGET_TM_MAX
+        # Calculate metrics for the binding part
+        binding_gc = gc_fraction(str(primer_binding_part)) * 100
+        binding_tm = _calculate_tm(str(primer_binding_part))
+
+        # Calculate metrics for the full primer
+        full_gc = gc_fraction(full_primer_seq) * 100
+        full_tm = _calculate_tm(full_primer_seq)
+
+        # Check if criteria are met (based on binding part)
+        is_len_ok = MIN_PRIMER_LEN <= len(primer_binding_part) <= MAX_PRIMER_LEN
+        is_gc_ok = TARGET_GC_MIN <= binding_gc <= TARGET_GC_MAX
+        is_tm_ok = TARGET_TM_MIN <= binding_tm <= TARGET_TM_MAX
 
         if is_len_ok and is_gc_ok and is_tm_ok:
             # Found a perfect primer, return it immediately
             return {
-                "binding_part": str(primer_binding_part),
-                "full_primer": full_primer_seq,
-                "length": len(full_primer_seq) - len(enzyme_site),
-                "gc_content": round(current_gc, 2),
-                "tm": round(current_tm, 2),
+                "binding_part_sequence": str(primer_binding_part),
+                "full_primer_sequence": full_primer_seq,
+                "binding_part_length": len(primer_binding_part),
+                "full_primer_length": len(full_primer_seq),
+                "binding_part_gc_content": round(binding_gc, 2),
+                "binding_part_tm": round(binding_tm, 2),
+                "full_primer_gc_content": round(full_gc, 2),
+                "full_primer_tm": round(full_tm, 2),
                 "notes": "Optimal primer found within specified criteria."
             }
         else:
             # Calculate deviation for "best effort" if no perfect primer is found
             deviation = 0
             if not is_len_ok:
-                deviation += min(abs(len(full_primer_seq) - len(enzyme_site) - MIN_PRIMER_LEN),
-                                 abs(len(full_primer_seq) - len(enzyme_site) - MAX_PRIMER_LEN)) * 2 # Higher penalty for length
+                deviation += min(abs(len(primer_binding_part) - MIN_PRIMER_LEN),
+                                 abs(len(primer_binding_part) - MAX_PRIMER_LEN)) * 2 # Higher penalty for length
             if not is_gc_ok:
-                deviation += min(abs(current_gc - TARGET_GC_MIN), abs(current_gc - TARGET_GC_MAX))
+                deviation += min(abs(binding_gc - TARGET_GC_MIN), abs(binding_gc - TARGET_GC_MAX))
             if not is_tm_ok:
-                deviation += min(abs(current_tm - TARGET_TM_MIN), abs(current_tm - TARGET_TM_MAX))
+                deviation += min(abs(binding_tm - TARGET_TM_MIN), abs(binding_tm - TARGET_TM_MAX))
 
             if deviation < min_deviation:
                 min_deviation = deviation
+                notes_list = ["Best effort primer found, but not all criteria met:"]
+                if not is_len_ok:
+                    notes_list.append(f"  - Length ({len(primer_binding_part)} bp) not in [{MIN_PRIMER_LEN}-{MAX_PRIMER_LEN}] bp.")
+                if not is_gc_ok:
+                    notes_list.append(f"  - GC Content ({round(binding_gc, 2)}%) not in [{TARGET_GC_MIN}-{TARGET_GC_MAX}]%.")
+                if not is_tm_ok:
+                    notes_list.append(f"  - Tm ({round(binding_tm, 2)}°C) not in [{TARGET_TM_MIN}-{TARGET_TM_MAX}]°C.")
+                
                 best_primer_info = {
-                    "binding_part": str(primer_binding_part),
-                    "full_primer": full_primer_seq,
-                    "length": len(full_primer_seq) - len(enzyme_site),
-                    "gc_content": round(current_gc, 2),
-                    "tm": round(current_tm, 2),
-                    "notes": "Best effort primer found, but not all criteria met."
+                    "binding_part_sequence": str(primer_binding_part),
+                    "full_primer_sequence": full_primer_seq,
+                    "binding_part_length": len(primer_binding_part),
+                    "full_primer_length": len(full_primer_seq),
+                    "binding_part_gc_content": round(binding_gc, 2),
+                    "binding_part_tm": round(binding_tm, 2),
+                    "full_primer_gc_content": round(full_gc, 2),
+                    "full_primer_tm": round(full_tm, 2),
+                    "notes": "\n".join(notes_list)
                 }
     return best_primer_info if best_primer_info else {
-        "binding_part": "", "full_primer": "", "length": 0, "gc_content": 0.0, "tm": 0.0,
+        "binding_part_sequence": "", "full_primer_sequence": "",
+        "binding_part_length": 0, "full_primer_length": 0,
+        "binding_part_gc_content": 0.0, "binding_part_tm": 0.0,
+        "full_primer_gc_content": 0.0, "full_primer_tm": 0.0,
         "notes": "Could not find any suitable primer within the given constraints."
     }
 
@@ -115,21 +140,27 @@ def design_primers_logic(cds_sequence: str, forward_enzyme_site: str, reverse_en
     reverse_primer_data = _find_optimal_primer(cds_sequence, False, reverse_enzyme_site)
 
     return {
-        "forward_primer": f"5'-{forward_primer_data['full_primer']}-3'",
+        "forward_primer": f"5'-{forward_primer_data['full_primer_sequence']}-3'",
         "forward_primer_details": {
-            "binding_part": forward_primer_data['binding_part'],
-            "length": forward_primer_data['length'],
-            "gc_content": forward_primer_data['gc_content'],
-            "tm": forward_primer_data['tm'],
+            "binding_part_sequence": forward_primer_data['binding_part_sequence'],
+            "binding_part_length": forward_primer_data['binding_part_length'],
+            "binding_part_gc_content": forward_primer_data['binding_part_gc_content'],
+            "binding_part_tm": forward_primer_data['binding_part_tm'],
+            "full_primer_length": forward_primer_data['full_primer_length'],
+            "full_primer_gc_content": forward_primer_data['full_primer_gc_content'],
+            "full_primer_tm": forward_primer_data['full_primer_tm'],
             "notes": forward_primer_data['notes']
         },
-        "reverse_primer": f"5'-{reverse_primer_data['full_primer']}-3'",
+        "reverse_primer": f"5'-{reverse_primer_data['full_primer_sequence']}-3'",
         "reverse_primer_details": {
-            "binding_part": reverse_primer_data['binding_part'],
-            "length": reverse_primer_data['length'],
-            "gc_content": reverse_primer_data['gc_content'],
-            "tm": reverse_primer_data['tm'],
+            "binding_part_sequence": reverse_primer_data['binding_part_sequence'],
+            "binding_part_length": reverse_primer_data['binding_part_length'],
+            "binding_part_gc_content": reverse_primer_data['binding_part_gc_content'],
+            "binding_part_tm": reverse_primer_data['binding_part_tm'],
+            "full_primer_length": reverse_primer_data['full_primer_length'],
+            "full_primer_gc_content": reverse_primer_data['full_primer_gc_content'],
+            "full_primer_tm": reverse_primer_data['full_primer_tm'],
             "notes": reverse_primer_data['notes']
         },
-        "overall_notes": "Primers designed considering length, GC content, and Tm. Tm calculated using Nearest-Neighbor method."
+        "overall_notes": "Primers designed considering length, GC content, and Tm. Tm calculated using Nearest-Neighbor method. Metrics provided for both binding part and full primer."
     }
