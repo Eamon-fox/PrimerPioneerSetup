@@ -5,6 +5,9 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
+    "bio>=1.8.0",
+    "biopython>=1.85",
     "mcp[cli]>=1.12.4",
     "pillow>=11.3.0",
+    "snapgene-reader>=0.1.23",
 ]
