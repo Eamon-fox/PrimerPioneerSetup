@@ -73,7 +73,8 @@ def get_cds_by_gene_simple(gene_name: str, organism: str = "Homo sapiens") -> st
     logging.info(f"Retrieved CDS FASTA length (merged): {length_bp} bp")
 
     # 创建用于存放中间文件的目录
-    output_dir = Path(__file__).resolve().parent / "data" / "temp_cds"
+    # 修正路径，使其指向项目根目录下的 data/temp_cds
+    output_dir = Path(__file__).resolve().parent.parent / "data" / "temp_cds"
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # 从 FASTA 第一行提取 accession；常见为 >lcl|NM_014306.5 ...
