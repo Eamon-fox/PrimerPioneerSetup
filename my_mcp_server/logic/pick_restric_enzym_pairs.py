@@ -52,8 +52,8 @@ def pick_enzyme_pairs_from_dna(dna_path: str, insert_seq: str) -> List[Dict]:
 # # ---------------- 调试入口 ----------------
 # if __name__ == "__main__":
 #     # ====== 配置区 ======
-#     dna_path = "pcDNA3.1(-).dna"
-#     insert_path = "temp_cds/RTCB_Homo_sapiens_lcl_NM_014306.5_cds_NP_055121.1_1.fasta"
+#     dna_path = "data/pcDNA3.1(-).dna"
+#     insert_path = "data/temp_cds/RTCB_Homo_sapiens_lcl_NM_014306.5_cds_NP_055121.1_1.fasta"
 #     # ====================
 
 #     # 读取 insert 文件内容（支持 FASTA / 纯序列）

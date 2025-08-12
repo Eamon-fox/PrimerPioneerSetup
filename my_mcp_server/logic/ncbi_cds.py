@@ -7,7 +7,7 @@ from pathlib import Path
 logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(message)s')
 
 # 必须填邮箱（NCBI 要求）
-Entrez.email = os.getenv("NCBI_EMAIL", "you@example.com")
+Entrez.email = os.getenv("NCBI_EMAIL", "fym22@mails.tsinghua.edu.cn")
 Entrez.api_key = os.getenv("NCBI_API_KEY", None)
 
 # ------- Windows/跨平台安全文件名处理 -------
@@ -73,7 +73,7 @@ def get_cds_by_gene_simple(gene_name: str, organism: str = "Homo sapiens") -> st
     logging.info(f"Retrieved CDS FASTA length (merged): {length_bp} bp")
 
     # 创建用于存放中间文件的目录
-    output_dir = Path(__file__).resolve().parent / "temp_cds"
+    output_dir = Path(__file__).resolve().parent / "data" / "temp_cds"
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # 从 FASTA 第一行提取 accession；常见为 >lcl|NM_014306.5 ...

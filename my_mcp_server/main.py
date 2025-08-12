@@ -9,8 +9,8 @@ import io
 from mcp.server.fastmcp import FastMCP
 from mcp.types import ImageContent
 from PIL import Image, ImageDraw
-from pick_restric_enzym_pairs import pick_enzyme_pairs_from_dna
-from ncbi_cds import get_cds_by_gene_simple
+from logic.pick_restric_enzym_pairs import pick_enzyme_pairs_from_dna
+from logic.ncbi_cds import get_cds_by_gene_simple
 
 
 # 初始化 FastMCP 服务器
@@ -31,7 +31,7 @@ def get_cds_sequence(gene_name: str, organism: str = "Homo sapiens") -> str:
 @mcp.tool()
 def select_restriction_sites(vector_dna_path: str, insert_sequence: str) -> dict:
     """
-    选择合适的双酶切位点。
+    根据提供的载体和插入序列的文件路径，选择合适的双酶切位点。
 
     Args:
         vector_dna_path: 载体DNA文件的路径。
