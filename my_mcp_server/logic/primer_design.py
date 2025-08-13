@@ -57,9 +57,7 @@ def _find_optimal_primer(
         binding_gc = gc_fraction(str(primer_binding_part)) * 100
         binding_tm = _calculate_tm(str(primer_binding_part))
 
-        # Calculate metrics for the full primer
-        full_gc = gc_fraction(full_primer_seq) * 100
-        full_tm = _calculate_tm(full_primer_seq)
+
 
         # Check if criteria are met (based on binding part)
         is_len_ok = MIN_PRIMER_LEN <= len(primer_binding_part) <= MAX_PRIMER_LEN
@@ -75,8 +73,6 @@ def _find_optimal_primer(
                 "full_primer_length": len(full_primer_seq),
                 "binding_part_gc_content": round(binding_gc, 2),
                 "binding_part_tm": round(binding_tm, 2),
-                "full_primer_gc_content": round(full_gc, 2),
-                "full_primer_tm": round(full_tm, 2),
                 "notes": "Optimal primer found within specified criteria."
             }
         else:
@@ -107,15 +103,13 @@ def _find_optimal_primer(
                     "full_primer_length": len(full_primer_seq),
                     "binding_part_gc_content": round(binding_gc, 2),
                     "binding_part_tm": round(binding_tm, 2),
-                    "full_primer_gc_content": round(full_gc, 2),
-                    "full_primer_tm": round(full_tm, 2),
+
                     "notes": "\n".join(notes_list)
                 }
     return best_primer_info if best_primer_info else {
         "binding_part_sequence": "", "full_primer_sequence": "",
         "binding_part_length": 0, "full_primer_length": 0,
         "binding_part_gc_content": 0.0, "binding_part_tm": 0.0,
-        "full_primer_gc_content": 0.0, "full_primer_tm": 0.0,
         "notes": "Could not find any suitable primer within the given constraints."
     }
 
@@ -147,8 +141,7 @@ def design_primers_logic(cds_sequence: str, forward_enzyme_site: str, reverse_en
             "binding_part_gc_content": forward_primer_data['binding_part_gc_content'],
             "binding_part_tm": forward_primer_data['binding_part_tm'],
             "full_primer_length": forward_primer_data['full_primer_length'],
-            "full_primer_gc_content": forward_primer_data['full_primer_gc_content'],
-            "full_primer_tm": forward_primer_data['full_primer_tm'],
+
             "notes": forward_primer_data['notes']
         },
         "reverse_primer": f"5'-{reverse_primer_data['full_primer_sequence']}-3'",
@@ -158,8 +151,6 @@ def design_primers_logic(cds_sequence: str, forward_enzyme_site: str, reverse_en
             "binding_part_gc_content": reverse_primer_data['binding_part_gc_content'],
             "binding_part_tm": reverse_primer_data['binding_part_tm'],
             "full_primer_length": reverse_primer_data['full_primer_length'],
-            "full_primer_gc_content": reverse_primer_data['full_primer_gc_content'],
-            "full_primer_tm": reverse_primer_data['full_primer_tm'],
             "notes": reverse_primer_data['notes']
         },
         "overall_notes": "Primers designed considering length, GC content, and Tm. Tm calculated using Nearest-Neighbor method. Metrics provided for both binding part and full primer."

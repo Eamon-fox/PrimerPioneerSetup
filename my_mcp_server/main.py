@@ -21,7 +21,7 @@ mcp = FastMCP("my-mcp-server")
 @mcp.tool()
 def read_fasta_file(path: str) -> str:
     """
-    读取FASTA文件并返回其序列内容。
+    读取FASTA文件并返回其序列内容。非必要请勿读取vector等长序列。
 
     Args:
         path: FASTA文件的路径。
